@@ -1,0 +1,21 @@
+{
+  "fsm_state": "IDLE",
+  "fsm_substate": null,
+  "energy": null,
+  "granularity": 3,
+  "active_task": null,
+  "drift": {
+    "active": false,
+    "side_task": null,
+    "return_time": null
+  },
+  "last_activity": null,
+  "last_startup_success": null,
+  "consecutive_startup_successes": 0,
+  "side_track_locked": false,
+  "fail_safe_active": false,
+  "week_phase": "STABLE_WEEK",
+  "onboarding_complete": false,
+  "user_timezone": null,
+  "created_at": null
+}
