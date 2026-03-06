@@ -1,83 +1,120 @@
 # Architecture
 
-ClawCoach is built as an OpenClaw skill. It does not run its own servers.
-
-## What OpenClaw provides
-
-| Component | What it does |
-|-----------|-------------|
-| Gateway process | Receives Telegram messages, manages sessions, serialises per-user queues |
-| Heartbeat scheduler | Fires every 30 min, reads HEARTBEAT.md, triggers agent loop |
-| Agent loop | Assembles context → calls Claude API → executes tool calls → streams reply |
-| Memory system | Injects workspace files (memory.md, state.json, etc.) into every context |
-| Telegram adapter | grammY-based connector, handles webhooks and bot API delivery |
-| File tools | Read/write Markdown and JSON files in the workspace directory |
-
-## What ClawCoach provides
-
-| File | Role |
-|------|------|
-| `skills/clawcoach/SKILL.md` | Coaching logic: state machine, all regulation rules, language rules |
-| `workspace_template/HEARTBEAT.md` | Proactive loop: 6 ordered checks, Silence Principle implementation |
-| `workspace_template/memory.md` | Long-term user context schema and update rules |
-| `workspace_template/state.json` | Per-user FSM state schema |
-| `workspace_template/today.md` | Daily log structure |
-| `workspace_template/routine.md` | Routine configuration |
-| `workspace_template/calendar.md` | Calendar event schema for interrupt detection |
-| `workspace_template/energy_log.json` | Time-series energy data for Evolution Layer |
-| `workspace_template/RULES.md` | Hard inviolable rules injected at all times |
-
-## Data flow
+## Layers
 
 ```
-User (Telegram)
-  ↓ message
-OpenClaw Gateway
-  ↓ normalise + session lookup
-Agent Loop
-  ↓ assemble context:
-    RULES.md + SKILL.md + memory.md + state.json + today.md + conversation history
-  ↓ Claude API call
-  ↓ tool calls: read/write workspace files
-  ↓ reply
-OpenClaw Gateway → Telegram → User
-
-[Parallel: Heartbeat every 30 min]
-OpenClaw Scheduler
-  ↓ trigger agent loop with HEARTBEAT.md as primary instruction
-  ↓ Claude reads checklist, runs checks, either:
-     → sends proactive message via Gateway → Telegram → User
-     → returns HEARTBEAT_OK (Gateway drops silently)
+┌─────────────────────────────────────────────────────┐
+│  User (Telegram DM)                                 │
+└──────────────────┬──────────────────────────────────┘
+                   │ message
+┌──────────────────▼──────────────────────────────────┐
+│  OpenClaw Gateway                                   │
+│  - Telegram adapter                                 │
+│  - Session management (per user)                    │
+│  - Heartbeat scheduler (every 5min)                 │
+│  - Cron scheduler (precise one-shot + recurring)    │
+│  - Command queue (serialises per-user)              │
+└──────────────────┬──────────────────────────────────┘
+                   │ agent turn
+┌──────────────────▼──────────────────────────────────┐
+│  Agent Loop (Pi framework)                          │
+│  Context assembled each turn:                       │
+│    RULES.md + SKILL.md + memory.md                  │
+│    + state.json + tasks.json + today.md             │
+│    + conversation history                           │
+│  → Claude API call                                  │
+│  → Tool calls: read/write files, cron.add/remove    │
+│  → Reply delivered to Telegram                      │
+└─────────────────────────────────────────────────────┘
 ```
 
-## Per-user workspace structure
+## Decision ownership
+
+| Decision | Made by |
+|----------|---------|
+| State transition occurred? | Claude (SKILL.md) |
+| Which cron jobs to create/cancel? | Claude (SKILL.md protocol) |
+| Cron job still exists? | bash (heartbeat-check.sh) |
+| Timestamp elapsed? | bash (heartbeat-check.sh) |
+| Consecutive zero-start days? | bash (heartbeat-check.sh) |
+| What to say to the user? | Claude (SKILL.md language rules) |
+| Task priority score? | Claude (formula) → stored in tasks.json |
+| Energy-adjusted ranking? | Claude (view layer, not stored) |
+
+**Rule:** Any decision that requires reading a number and comparing it to a threshold → bash.
+Any decision that requires understanding context, intent, or generating language → Claude.
+
+## State transitions and side effects
+
+Every state transition must:
+1. `write_file: state.json` — new FSM state
+2. `cron.list` — check what's currently active (avoid duplicates)
+3. `cron.remove` for each obsolete job in `state.active_cron_jobs`
+4. `cron.add` for each new job needed
+5. `write_file: state.json` again — update `active_cron_jobs` list
+6. Send message if warranted
+
+Step 2 (cron.list before adding) is important — if the Gateway restarted and
+the heartbeat already recreated a missing job, SKILL.md shouldn't create a duplicate.
+
+## Task registry
+
+`tasks.json` is the canonical record of all tasks. It is never overwritten wholesale —
+SKILL.md reads it, modifies the relevant task or appends a new one, and writes it back.
+
+`today.md` is a human-readable daily view, not the source of truth.
+If today.md and tasks.json conflict, tasks.json wins.
+
+## Cron job naming convention
+
+All ClawCoach cron jobs use the prefix `cc:` for easy scoping:
 
 ```
-~/.openclaw/workspaces/clawcoach/
-├── HEARTBEAT.md        # Proactive loop (shared template, same for all users)
-├── RULES.md            # Hard rules (shared template)
-├── memory.md           # Long-term context (unique per user, grows over time)
-├── state.json          # Current FSM state (unique per user, updated frequently)
-├── today.md            # Daily log (reset each morning, archived to YYYY-MM-DD.md)
-├── routine.md          # Routine config (unique per user, set during onboarding)
-├── calendar.md         # Upcoming events (unique per user)
-├── energy_log.json     # Time-series energy (unique per user, append-only)
-└── archive/
-    ├── 2026-03-01.md   # Previous today.md files
-    └── ...
+cc:focus-check:<task_id>         one-shot, per task
+cc:hyperfocus-guard:<task_id>    one-shot, per task (rescheduled on continuation)
+cc:stuck-followup:<task_id>      one-shot, per stuck event
+cc:intent-followup:<task_id>     one-shot, per resistance event
+cc:recovery-check                one-shot, per low-energy entry
+cc:interrupt-prep:<event_id>     one-shot, per calendar event
+cc:interrupt-final:<event_id>    one-shot, per calendar event
+cc:resume:<event_id>             one-shot, per calendar event
+cc:failsafe-check                one-shot, recreated daily while in FAIL_SAFE
+morning-start                    recurring, created at onboarding
+sleep-guard                      recurring, created at onboarding
+meal:lunch                       recurring, created at onboarding
+meal:dinner                      recurring, created at onboarding
 ```
 
-## Multi-user deployment
+`cron.list` filtered by `cc:` prefix gives a complete picture of active coaching state.
 
-For multiple users, each user gets their own workspace directory. The OpenClaw Gateway routes messages to the correct workspace based on Telegram user ID.
+## Multi-user
 
-See `docs/multi-user.md` for deployment details.
+Each user = one OpenClaw agent with an isolated workspace.
+Separate state.json, tasks.json, memory.md, cron jobs, sessions.
 
-## Model recommendation
+For small team MVP (2–5 users):
+```bash
+openclaw agents add clawcoach-alice
+openclaw agents add clawcoach-bob
+```
 
-Primary: `claude-sonnet-4-20250514`
-- Strong at following structured instructions (SKILL.md)
-- Empathetic tone by default
-- Good context window for memory + history + skill
+Each agent binds to a different Telegram bot token (one bot per user).
+Workspace files are fully isolated — no shared state.
 
-Heartbeat: Consider `claude-haiku-4-5-20251001` for cost efficiency on silent ticks.
+For larger scale: single agent + per-user subdirectories is possible but
+requires SKILL.md to route file reads/writes based on sender ID.
+Recommended only after validating the single-user model works.
+
+## Cost model
+
+| Component | Model | Frequency | Est. tokens/call |
+|-----------|-------|-----------|-----------------|
+| User message | Sonnet | On demand | 4k–12k |
+| Heartbeat (OK) | Haiku | Every 5min | ~200 |
+| Heartbeat (alert) | Haiku | Rare | ~500 |
+| Cron job (focus-check) | Haiku | Per task start | ~800 |
+| Cron job (morning-start) | Sonnet | Daily | ~3k |
+| Cron job (interrupt-prep) | Sonnet | Per event | ~2k |
+
+Haiku for all cron jobs except morning-start and interrupt-prep.
+Set `model` field on each cron job payload accordingly.

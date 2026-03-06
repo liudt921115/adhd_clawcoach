@@ -8,85 +8,49 @@ Built as an [OpenClaw](https://openclaw.ai) skill. Runs in Telegram. No app to i
 
 ---
 
-## How it works
+## How decisions happen
 
-ClawCoach lives in your Telegram. It:
-- **Adjusts tasks continuously** based on your energy (full task → micro task → just open the file)
-- **Checks in proactively** via the Heartbeat loop — but stays silent when you're doing well
-- **Detects resistance** and helps you find the real block, not just push harder
-- **Resets gracefully** after bad periods — no shame loops, no stats, just 2-minute tasks
-- **Remembers you** across sessions, building a picture of what actually works for you
+Every coaching action originates from a **state transition**, not a periodic ping.
+
+```
+User message or cron job fires
+  → SKILL.md reads state.json + tasks.json
+  → Determines if a state transition occurred
+  → Writes new state.json
+  → Cancels obsolete cron jobs (cron.remove)
+  → Creates new cron jobs (cron.add) with precise timestamps
+  → Sends message if transition warrants one
+  → Silent otherwise
+```
+
+The **heartbeat** (every 5 min) is a bash watchdog only — it checks that the cron jobs that *should* exist actually do. It never initiates coaching. If everything is fine, it returns `HEARTBEAT_OK` which the Gateway silently drops.
 
 ---
 
-## Quickstart
+## Task priority system
 
-### Prerequisites
-- [OpenClaw](https://openclaw.ai) installed and running
-- Telegram bot token (from [@BotFather](https://t.me/BotFather))
-- Anthropic API key
+Every task has urgency (1–5), importance (1–5), and inferred activation cost (1–5).
 
-### 1. Clone this repo
-
-```bash
-git clone https://github.com/your-org/clawcoach.git
-cd clawcoach
+```
+score = 0.45 × urgency + 0.45 × importance + 0.10 × activation_cost
 ```
 
-### 2. Set up your OpenClaw workspace
+When you add a task, ClawCoach asks two questions (urgency + importance) and places the task in the right position in the queue. At low energy, the ranking shifts to surface easier-to-start tasks first — not because your goals changed, but because you can't start what you can't activate.
 
-```bash
-# Copy the workspace template to your OpenClaw workspace directory
-cp -r workspace_template/* ~/.openclaw/workspaces/clawcoach/
+---
 
-# Run the setup script to initialise per-user state files
-./scripts/setup.sh
-```
+## Cron job model
 
-### 3. Install the skill
+All proactive messages come from one-shot cron jobs created at the moment of a state transition. They fire once, deliver to your Telegram DM, and auto-delete.
 
-```bash
-# Copy the skill into OpenClaw's skills directory
-cp -r skills/clawcoach ~/.openclaw/skills/
-```
-
-### 4. Configure OpenClaw
-
-Add to your `openclaw.json`:
-
-```json
-{
-  "telegram": {
-    "token": "YOUR_TELEGRAM_BOT_TOKEN"
-  },
-  "models": {
-    "primary": {
-      "provider": "anthropic",
-      "model": "claude-sonnet-4-20250514",
-      "api_key": "YOUR_ANTHROPIC_API_KEY"
-    }
-  },
-  "heartbeat": {
-    "interval_minutes": 30
-  },
-  "workspace": "~/.openclaw/workspaces/clawcoach"
-}
-```
-
-### 5. Start OpenClaw
-
-```bash
-openclaw gateway
-```
-
-### 6. Message your bot
-
-Find your bot on Telegram and send:
-```
-/start
-```
-
-ClawCoach will begin onboarding. It takes about 5 minutes to set up your goals, routine, and energy baseline.
+| Trigger | Jobs created |
+|---------|-------------|
+| Task started | `focus-check` (+90s) · `hyperfocus-guard` (+30min, recurring) |
+| Task switched | Cancel old jobs · Create new jobs for new task |
+| Calendar event added | `interrupt-prep` · `interrupt-final` · `resume-reminder` |
+| Low energy | `recovery-check` (+60min) |
+| Fail-safe entered | All task crons cancelled · `failsafe-check` (+24h) |
+| Onboarding complete | `morning-start` · `sleep-guard` · meal reminders (all recurring) |
 
 ---
 
@@ -96,103 +60,116 @@ ClawCoach will begin onboarding. It takes about 5 minutes to set up your goals, 
 clawcoach/
 ├── skills/
 │   └── clawcoach/
-│       └── SKILL.md          # The coaching brain — state machine, all regulation logic
+│       └── SKILL.md               # Coaching brain: state machine, task registry,
+│                                  # cron scheduling, language rules
 ├── workspace_template/
-│   ├── HEARTBEAT.md          # Proactive check loop (runs every 30 min)
-│   ├── memory.md             # Long-term user context (seeded during onboarding)
-│   ├── state.json            # FSM state, energy, active task, granularity
-│   ├── today.md              # Daily task list and completion log
-│   ├── routine.md            # Meal, rest, sleep schedule
-│   ├── calendar.md           # Upcoming events for interrupt detection
-│   ├── energy_log.json       # Time-series energy tracking (Evolution Layer)
-│   └── RULES.md              # Hard rules the model must always follow
+│   ├── HEARTBEAT.md               # Watchdog: calls script, dispatches alerts
+│   ├── scripts/
+│   │   └── heartbeat-check.sh     # Bash: all watchdog logic (no LLM arithmetic)
+│   ├── state.json                 # FSM state, active task, cron job list
+│   ├── tasks.json                 # Task registry with priority scores
+│   ├── memory.md                  # Long-term user context
+│   ├── today.md                   # Daily log
+│   ├── routine.md                 # Meal, rest, sleep schedule
+│   ├── calendar.md                # Events for interrupt detection
+│   ├── energy_log.json            # Time-series energy + daily summaries
+│   └── RULES.md                   # Hard inviolable rules
 ├── docs/
-│   ├── architecture.md       # Full system design
-│   ├── onboarding.md         # What happens on /start
-│   ├── commands.md           # Full command reference
-│   └── multi-user.md        # Deploying for multiple users
+│   ├── architecture.md
+│   ├── commands.md
+│   └── multi-user.md
 ├── scripts/
-│   └── setup.sh             # Workspace initialisation script
+│   └── setup.sh
 └── README.md
+```
+
+---
+
+## Quickstart
+
+### 1. Register the agent
+
+```bash
+openclaw agents add clawcoach
+# wizard creates ~/.openclaw/workspaces/clawcoach/ and agentDir
+```
+
+### 2. Copy ClawCoach files
+
+```bash
+git clone https://github.com/your-org/clawcoach.git
+cd clawcoach
+cp -r workspace_template/* ~/.openclaw/workspaces/clawcoach/
+cp -r skills/clawcoach ~/.openclaw/skills/
+chmod +x ~/.openclaw/workspaces/clawcoach/scripts/heartbeat-check.sh
+```
+
+### 3. Configure openclaw.json
+
+```json
+{
+  "agents": {
+    "list": [
+      {
+        "id": "clawcoach",
+        "workspace": "~/.openclaw/workspaces/clawcoach",
+        "heartbeat": {
+          "every": "5m",
+          "target": "last",
+          "model": "anthropic/claude-haiku-4-5-20251001",
+          "prompt": "Run heartbeat-check.sh using exec tool. If output is HEARTBEAT_OK reply HEARTBEAT_OK. Otherwise read HEARTBEAT.md for the alert type and execute the action."
+        }
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "agentId": "clawcoach",
+      "match": { "channel": "telegram", "accountId": "YOUR_BOT_TOKEN_ID" }
+    }
+  ]
+}
+```
+
+Note: Heartbeat uses Haiku (cheap, fast) — it's almost always returning HEARTBEAT_OK.
+Actual coaching conversations use the default model (Sonnet).
+
+### 4. Start and onboard
+
+```bash
+openclaw gateway
+# Then message your Telegram bot: /start
 ```
 
 ---
 
 ## Talking to ClawCoach
 
-### Starting your day
 ```
-Good morning
-→ ClawCoach checks your energy, reviews today's priorities, suggests where to start
-
-/energy high
-→ Sets energy to high, unlocks full task granularity
-
-What should I work on?
-→ Runs priority engine, returns top task with suggested approach
-```
-
-### During work
-```
-I'm stuck
-→ Triggers Intent Check: real want vs. should-do pressure
-
-This task is too big
-→ Shrinks task to next granularity level
-
-I need a break
-→ Acknowledges, sets return reminder
-
-Let me work on [side project] for a bit
-→ Triggers Controlled Drift, sets return time, tracks main track
-```
-
-### Energy check-ins
-```
-/energy low
-→ Switches to low-energy mode: micro tasks, reduced expectations, no stats
-
-I'm exhausted today
-→ Same as /energy low, interpreted from natural language
-```
-
-### End of day
-```
-I'm done for today
-→ Runs Closure Loop: reviews what happened, no judgment, sets tomorrow's first task
+/start                     → Onboarding (goals, tasks, routine, style, first task)
+/status                    → Current state, active task, top 3 priority queue
+"Add: review PR from Sam"  → Triggers urgency/importance questions, adds to queue
+"I'm starting [task]"      → RUNNING state, focus-check + hyperfocus-guard scheduled
+"I'm stuck"                → Intent Check triggered
+"I'm tired"                → Low energy mode, task granularity reduced
+"Switch to [task]"         → Old crons cancelled, new task crons created
+"I have a meeting at 3pm"  → Interrupt chain scheduled (prep + final + resume)
+"I'm done"                 → Closure loop, daily summary, tomorrow's first task
 ```
 
 ---
 
-## The files that matter
+## Key design decisions
 
-| File | What it does |
-|------|-------------|
-| `SKILL.md` | The coaching logic. Edit this to change how ClawCoach behaves. |
-| `HEARTBEAT.md` | The proactive loop. Edit check thresholds and actions here. |
-| `memory.md` | Your long-term context. ClawCoach writes to this automatically. |
-| `state.json` | Current FSM state. You can inspect this to debug behaviour. |
-| `routine.md` | Your daily routine. Edit directly or via chat commands. |
+**State machine drives everything.** The LLM executes actions; bash scripts and explicit state transitions make decisions. No ad-hoc coaching.
 
----
+**Task registry is the source of truth.** `tasks.json` stores every task with its score. Today.md is a display view, not the record. Tasks are never deleted — only status-changed.
 
-## Philosophy
+**Cron jobs are ephemeral.** One-shot jobs fire once and disappear. The only recurring jobs are routine (morning, sleep, meals) — created once at onboarding.
 
-ClawCoach is built on one principle: **keep direction, change method**.
+**Heartbeat is a safety net.** It never initiates a coaching action. It only asks: "do the cron jobs that should exist actually exist?" — useful after a Gateway restart.
 
-- It never changes your goals
-- It always changes how you get there based on how you are right now
-- It speaks when something changes, and goes quiet when you're okay
-- It recognises behaviour, not output
-- It never uses the words: efficiency, productivity, discipline, optimize
-
----
-
-## Contributing
-
-See [docs/architecture.md](docs/architecture.md) for the full system design.
-
-The skill logic lives entirely in `skills/clawcoach/SKILL.md`. This is natural language — no code required to modify coaching behaviour.
+**Silence is correct behaviour.** If the user is working and everything is on track, ClawCoach says nothing.
 
 ---
 
