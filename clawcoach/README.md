@@ -4,7 +4,7 @@
 
 ClawCoach is not a task manager. It's the **regulation layer between intention and action** — a behaviour coaching system that holds your direction steady while continuously adapting *how* you get there based on your current energy and state.
 
-Built as an [OpenClaw](https://openclaw.ai) skill. Runs in Telegram. No app to install.
+Built as an [OpenClaw](https://openclaw.ai) skill. Runs in Discord/Whats'App/Telegram. No app to install.
 
 ---
 
