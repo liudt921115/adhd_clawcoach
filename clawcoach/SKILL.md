@@ -140,6 +140,23 @@ When user mentions a new task while already in RUNNING state:
 
 ---
 
+## Task Breakdown Check (Start/Switch)
+
+Whenever the user starts a task OR switches to a new active task:
+
+1. Ask once:
+   > "Want a quick breakdown for this task, or do you want to run it as-is?"
+2. If user says **yes**:
+   - Offer a 3-step version at current granularity.
+   - Make step 1 a launch action that can start within 2 minutes.
+   - Save the breakdown in the task `notes` field (short bullet format).
+3. If user says **no**:
+   - Do not push. Start focus timers normally.
+4. If no reply:
+   - Proceed with normal focus-check flow (no repeated breakdown prompts).
+
+For switched tasks, ask again only for the newly active task.
+
 ## Dynamic Reprioritisation
 
 Recalculate all scores and reorder when:
@@ -348,9 +365,50 @@ The script makes all decisions. Claude only executes the pre-decided action.
 
 ---
 
+## Startup Failure Escalation (critical)
+
+Do NOT trigger Fail-Safe on first stuck/distracted message.
+
+Track `startup_failures_current_task` in `state.json` (integer):
+- +1 when user says they could not start after agreeing to start
+- reset to 0 when user starts any concrete step
+- reset to 0 when switching to another task
+
+Fail-Safe eligibility:
+- only when `startup_failures_current_task >= 3` for consecutive failed starts
+- before that, stay in ADJUSTING (no FAIL_SAFE transition)
+
+## First-Stuck Diagnostic Flow (1st/2nd failure)
+
+When user says "stuck", "distracted", or "cannot start":
+
+1. Ask blocker diagnosis (single prompt):
+   > "What’s blocking the start most right now: not clear, too difficult, too big, or low energy?"
+2. Branch by user's answer:
+
+**Not clear**
+- Help clarify outcome and first visible action.
+- Respond with: target sentence + first action sentence.
+
+**Too difficult**
+- Provide practical help directly (example/template/commands/checklist) for the immediate step.
+- Keep to one concrete action at a time.
+
+**Too big**
+- Offer quick breakdown (3 steps max).
+- Step 1 must be launchable in ≤2 minutes.
+- Save short breakdown into task `notes`.
+
+**Low energy**
+- Ask this choice:
+  > "Want a short rest, a quick meditation, or continue now in a smaller chunk?"
+- If continue: drop granularity by 1 level and give the new tiny first step.
+
+3. After intervention, re-attempt start and arm normal 90s focus-check.
+
 ## Intent Check
 
-Trigger when resistance detected in user message.
+Trigger when resistance persists OR user explicitly frames task as obligation.
 
 Ask once:
 > "Is [task] something you genuinely want to do right now, or something you feel you should do?"
@@ -372,6 +430,42 @@ Branch:
 
 ---
 
+## Energy State Handling
+
+Energy can be user-declared at any time.
+
+If user says things like "too tired", "low energy", "exhausted", "brain fog", or equivalent:
+1. Update `state.json` → `energy: "low"`
+2. Enter `ADJUSTING/LOW_ENERGY` if currently RUNNING
+3. Offer only 3 options:
+   - short rest
+   - quick meditation
+   - continue in a smaller chunk
+
+If user says "okay now", "better", "medium", "can continue":
+- set energy to `medium`
+
+If user says "energized", "high energy", "ready to push":
+- set energy to `high`
+
+### What changes by energy level
+
+**LOW**
+- Default to granularity 1 or 0
+- Suggest easiest-to-start tasks first
+- Short prompts, one action at a time
+- Prefer restart actions (open file, 2-minute launch step)
+
+**MEDIUM**
+- Default granularity 2
+- Normal focus blocks and 90s startup checks
+- Standard queue ordering
+
+**HIGH**
+- Allow granularity 3
+- Keep hyperfocus guards active
+- Encourage batching within the same track, but still ask consent before switching
+
 ## Granularity Adjustment
 
 ```
@@ -391,6 +485,24 @@ Rules:
 In FAIL_SAFE: all tasks forced to level 0, regardless of stored value.
 
 ---
+
+## Task Completion Micro-Closure
+
+Triggered whenever a task is marked `done`.
+
+Flow (always):
+1. Acknowledge completion in neutral recognition language.
+2. Ask exactly one next-step choice:
+   > "Nice, this one is done. Next: another task, a short break, or a small treat?"
+3. Branch:
+   - **another task** → suggest top active task + one tiny first step
+   - **short break** → suggest 5–10 min break and set a return check
+   - **small treat** → acknowledge reward, then ask return time
+4. Update `state.json`:
+   - if another task chosen and accepted → keep RUNNING and switch active task
+   - if break/treat chosen → set ADJUSTING/LOW_ENERGY or IDLE depending on user intent
+
+This micro-closure is separate from end-of-day Closure Loop.
 
 ## Closure Loop
 
