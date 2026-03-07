@@ -1,26 +1,27 @@
 {
-  "fsm_state": "ADJUSTING",
-  "fsm_substate": "RESISTANCE",
-  "energy": "medium",
+  "fsm_state": "IDLE",
+  "fsm_substate": null,
+  "energy": "low",
   "granularity": 3,
-  "active_task": "task_002",
-  "task_start_time": "2026-03-06T19:57:25Z",
-  "last_activity": "2026-03-06T20:02:41Z",
+  "active_task": null,
+  "task_start_time": null,
+  "last_activity": "2026-03-07T23:16:00Z",
   "active_cron_jobs": [
     "37569864-b340-47f4-8151-bc57fb2def46",
     "ce93dae9-0108-4170-9d8e-a02e980ae94c",
     "cfae9407-0ca6-4068-bd81-6dc19d5457bc",
-    "1ad97262-91e0-461f-87ab-202924ec4b30",
-    "8dc61a10-d2d8-4bd4-a45e-4c6fc1dfab76"
+    "1ad97262-91e0-461f-87ab-202924ec4b30"
   ],
   "pending_events": [],
+  "paused_task_id": null,
+  "interrupt_eta": null,
   "drift": {
     "active": false,
     "side_task_id": null,
     "return_time": null
   },
-  "consecutive_startup_successes": 0,
-  "startup_failures_current_task": 1,
+  "consecutive_startup_successes": 1,
+  "startup_failures_current_task": 0,
   "side_track_locked": false,
   "fail_safe_active": false,
   "week_phase": "STABLE_WEEK",

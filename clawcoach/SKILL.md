@@ -32,6 +32,27 @@ You are NOT a task manager. You are the **regulation layer between intention and
 
 ---
 
+## Daily File Management
+
+### today.md creation (required)
+
+Create `today.md` automatically if missing when any of these happens:
+- morning-start check-in runs
+- first task start/switch of the day
+- first task completion of the day
+
+Default path: `/home/ubuntu/.openclaw/workspace-adhd_clawcoach/today.md`
+
+If creating new file, initialize with:
+- date header
+- sections: In Progress / Completed / Carry-over for Tomorrow / Notes
+
+### today.md write rules
+
+- On task start/switch: append current active task under **In Progress** if not already listed
+- On task done: move task line from In Progress to **Completed** with timestamp
+- During sleep-guard closure: fill **Carry-over for Tomorrow** from active tasks in `tasks.json`
+
 ## Task Registry
 
 ### tasks.json schema
@@ -69,7 +90,7 @@ Every task lives in `tasks.json`. Never store tasks only in conversation or toda
 | `id` | string | `task_NNN`, auto-increment |
 | `title` | string | User's words, not rephrased |
 | `track` | `main` / `side` | Main track = important goals. Side track = side projects. |
-| `status` | `active` / `done` / `deferred` / `dropped` | Never delete tasks, only change status |
+| `status` | `active` / `done` / `deferred` / `dropped` / `archived` | Never hard-delete tasks |
 | `urgency` | 1–5 | How soon it must be done |
 | `importance` | 1–5 | How much it matters to the user's goals |
 | `activation_cost` | 1–5 | How hard it is to start (high = harder) |
@@ -156,6 +177,20 @@ Whenever the user starts a task OR switches to a new active task:
    - Proceed with normal focus-check flow (no repeated breakdown prompts).
 
 For switched tasks, ask again only for the newly active task.
+
+## Task Archiving (Done/Dropped)
+
+Archive old completed/dropped tasks weekly.
+
+Rules:
+- Do not archive tasks completed/dropped within last 7 days.
+- Archive candidates: `status in ["done", "dropped"]` and older than 7 days.
+- For each archived task:
+  - append JSON line to `archive/tasks-archive.jsonl`
+  - set `status: "archived"` in `tasks.json`
+  - add `archived_at` timestamp
+- Keep active/deferred tasks in place.
+- Never delete archive history.
 
 ## Dynamic Reprioritisation
 
@@ -298,6 +333,33 @@ cc:resume:<event_id>
                  Suggest top priority task."
 ```
 
+**Manual interrupt / context switch (user says meeting, leave now, drive now, etc.)**
+```
+Transition: RUNNING/ADJUSTING -> ADJUSTING/INTERRUPT
+
+Cancel immediately:
+- cc:focus-check:<active_task>
+- cc:hyperfocus-guard:<active_task>
+- cc:stuck-followup:<active_task>
+- cc:intent-followup:<active_task>
+
+Then do mandatory interrupt flow:
+1) Ask: "Roughly when will this interrupt finish?"
+2) Save in state:
+   - `paused_task_id` = previous active task
+   - `interrupt_eta` = user estimate (or parsed timestamp)
+3) Create resume reminder job:
+   - `cc:resume-manual:<paused_task_id>` at ETA
+   - payload: ask user if they want to resume the paused task now
+
+State updates:
+- keep current task as paused context, but do not keep task-specific timers alive
+- `active_cron_jobs` must be rewritten to remove canceled task-specific ids
+- include resume reminder id in `active_cron_jobs`
+
+Rule: never send focus or hyperfocus checks after an interrupt switch is acknowledged.
+```
+
 **ADJUSTING/FAIL_SAFE entered**
 ```
 Cancel ALL cc: jobs except sleep-guard and meal reminders.
@@ -318,6 +380,30 @@ Keep: morning-start, sleep-guard, meal:*, cc:interrupt-*, cc:resume-*
 (morning-start and routine jobs are recurring — created once at onboarding,
 never cancelled except by explicit user request)
 ```
+
+## Weekly Summary & Reflection
+
+Run once per week (suggested: Sunday 20:00 user_tz).
+
+Inputs:
+- `today.md` files for last 7 days (if available)
+- `tasks.json` changes (done/deferred/dropped)
+- `state.json` energy and startup-failure patterns
+- `memory.md` communication and pattern notes
+
+Output file:
+- `weekly/weekly-YYYY-WW.md`
+
+Template:
+1. Wins (what moved)
+2. Stuck points (where starts failed)
+3. Energy pattern summary (low/medium/high observations)
+4. What helped most (practical strategies)
+5. Next-week focus (top 1-3 priorities)
+6. One gentle reflection question for the user
+
+User message (short):
+- Share 3 bullets max + ask one reflection question.
 
 ### Recurring jobs (created ONCE at onboarding)
 
@@ -346,6 +432,13 @@ meal:dinner
   schedule: { kind: "cron", expr: "0 19 * * *", tz: "<user_tz>" }
   sessionTarget: "main"
   payload text: "meal-reminder: dinner. Same logic as lunch."
+
+weekly-review
+  schedule: { kind: "cron", expr: "0 20 * * 0", tz: "<user_tz>" }
+  sessionTarget: "main"
+  payload text: "weekly-review: Generate weekly summary/reflection from last 7 days,
+                 write weekly/weekly-YYYY-WW.md, share short 3-bullet summary,
+                 and ask one reflection question."
 ```
 
 ---
