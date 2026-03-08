@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClawCoach — Behavior Regulation for ADHD Minds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e11;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --border: #2a2a35;
+    --accent: #7ee8a2;
+    --accent2: #a78bfa;
+    --accent3: #f9a8d4;
+    --text: #e8e8f0;
+    --muted: #7a7a90;
+    --warm: #fbbf24;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+  }
+
+  /* ─── NOISE OVERLAY ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.6;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 1.25rem 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(14,14,17,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.4rem;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .nav-logo .claw {
+    color: var(--accent);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2.5rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-cta {
+    background: var(--accent);
+    color: #0e0e11 !important;
+    padding: 0.5rem 1.25rem !important;
+    border-radius: 100px;
+    font-weight: 500 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 8rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 800px;
+    height: 800px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(126,232,162,0.06) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .hero-glow2 {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(167,139,250,0.05) 0%, transparent 70%);
+    top: 30%;
+    right: 15%;
+    pointer-events: none;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 0.4rem 1rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 2.5rem;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .tag-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(3.5rem, 8vw, 7rem);
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.8s 0.1s ease both;
+    max-width: 900px;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-subtitle {
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 3rem;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0e0e11;
+    padding: 0.85rem 2rem;
+    border-radius: 100px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    letter-spacing: -0.01em;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(126,232,162,0.3);
+  }
+
+  .btn-ghost {
+    color: var(--muted);
+    padding: 0.85rem 1.5rem;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .btn-ghost:hover { color: var(--text); }
+
+  /* ─── DEMO CHAT ─── */
+  .demo-section {
+    padding: 6rem 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+  }
+
+  .section-body {
+    color: var(--muted);
+    font-size: 1.05rem;
+    line-height: 1.7;
+    max-width: 520px;
+    margin-bottom: 3rem;
+  }
+
+  .demo-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .chat-window {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .chat-header {
+    background: var(--surface2);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .chat-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+  }
+
+  .chat-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .chat-status {
+    font-size: 0.75rem;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .chat-status::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .chat-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 480px;
+  }
+
+  .msg {
+    max-width: 85%;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.4s ease;
+  }
+
+  .msg.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .msg-bubble {
+    padding: 0.75rem 1.1rem;
+    border-radius: 14px;
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+
+  .msg-user { align-self: flex-end; }
+  .msg-user .msg-bubble {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg-ai { align-self: flex-start; }
+  .msg-ai .msg-bubble {
+    background: rgba(126,232,162,0.08);
+    border: 1px solid rgba(126,232,162,0.2);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+
+  .msg-time {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+    padding: 0 0.5rem;
+  }
+
+  .msg-user .msg-time { text-align: right; }
+
+  .energy-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(251,191,36,0.1);
+    border: 1px solid rgba(251,191,36,0.25);
+    color: var(--warm);
+    border-radius: 100px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+  }
+
+  .task-chip {
+    display: inline-block;
+    background: rgba(167,139,250,0.1);
+    border: 1px solid rgba(167,139,250,0.25);
+    color: var(--accent2);
+    border-radius: 8px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.78rem;
+    margin: 0.1rem;
+  }
+
+  /* ─── SCENARIO SELECTOR ─── */
+  .scenarios {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .scenario-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+  }
+
+  .scenario-btn:hover {
+    border-color: var(--accent);
+    background: rgba(126,232,162,0.04);
+  }
+
+  .scenario-btn.active {
+    border-color: var(--accent);
+    background: rgba(126,232,162,0.07);
+  }
+
+  .scenario-icon {
+    font-size: 1.25rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .scenario-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.2rem;
+  }
+
+  .scenario-desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ─── HOW IT WORKS ─── */
+  .architecture {
+    padding: 6rem 2rem;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .arch-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .layers {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 3.5rem;
+  }
+
+  .layer-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .layer-card:hover { border-color: var(--accent); }
+
+  .layer-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+  }
+
+  .layer-card:nth-child(1)::before { background: var(--accent2); }
+  .layer-card:nth-child(2)::before { background: var(--accent); }
+  .layer-card:nth-child(3)::before { background: var(--accent3); }
+
+  .layer-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+  }
+
+  .layer-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+
+  .layer-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .layer-subtitle {
+    font-size: 0.78rem;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+  }
+
+  .layer-body {
+    font-size: 0.875rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .layer-features {
+    margin-top: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .lf-item {
+    font-size: 0.8rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .lf-item::before {
+    content: '';
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  /* ─── ENERGY SYSTEM ─── */
+  .energy-section {
+    padding: 6rem 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .energy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+    margin-top: 3rem;
+  }
+
+  .energy-visual {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2rem;
+  }
+
+  .energy-bar-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .energy-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .energy-bar {
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  .energy-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 1s ease;
+  }
+
+  .fill-high { background: var(--accent); width: 85%; }
+  .fill-med { background: var(--warm); width: 52%; }
+  .fill-low { background: var(--accent3); width: 20%; }
+
+  .granularity-demo {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background: var(--bg);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .gran-title {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.08em;
+    margin-bottom: 1rem;
+  }
+
+  .gran-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .gran-step {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.82rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    transition: all 0.3s;
+  }
+
+  .gran-step.active {
+    background: rgba(126,232,162,0.08);
+    border: 1px solid rgba(126,232,162,0.2);
+    color: var(--text);
+  }
+
+  .gran-step.dim { color: var(--muted); opacity: 0.45; }
+
+  .gran-step-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+  .energy-features { list-style: none; display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .ef-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .ef-icon {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: rgba(126,232,162,0.08);
+    border: 1px solid rgba(126,232,162,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .ef-content h4 { font-size: 0.95rem; font-weight: 500; margin-bottom: 0.25rem; }
+  .ef-content p { font-size: 0.83rem; color: var(--muted); line-height: 1.6; }
+
+  /* ─── PRINCIPLES ─── */
+  .principles {
+    padding: 6rem 2rem;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .principles-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .principles-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+    margin-top: 3rem;
+  }
+
+  .principle-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .principle-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(126,232,162,0.3);
+  }
+
+  .pc-icon { font-size: 1.75rem; margin-bottom: 0.75rem; }
+  .pc-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .pc-body { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+
+  /* ─── CLOSING QUOTE ─── */
+  .quote-section {
+    padding: 8rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .quote-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(167,139,250,0.06) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .quote-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+    max-width: 800px;
+    margin: 0 auto 2rem;
+    position: relative;
+  }
+
+  .quote-text em { color: var(--accent); font-style: italic; }
+
+  .quote-source {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── CTA ─── */
+  .cta-section {
+    padding: 5rem 2rem 6rem;
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+
+  .cta-section h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+  }
+
+  .cta-section p {
+    color: var(--muted);
+    font-size: 1.05rem;
+    margin-bottom: 2.5rem;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    padding: 2rem 3rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ─── TYPING INDICATOR ─── */
+  .typing {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: rgba(126,232,162,0.06);
+    border: 1px solid rgba(126,232,162,0.15);
+    border-radius: 14px;
+    border-bottom-left-radius: 4px;
+    width: fit-content;
+  }
+
+  .typing span {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: blink 1.2s ease infinite;
+  }
+
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes blink {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+
+  /* responsive */
+  @media (max-width: 768px) {
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { display: none; }
+    .demo-container { grid-template-columns: 1fr; }
+    .layers { grid-template-columns: 1fr; }
+    .energy-grid { grid-template-columns: 1fr; }
+    .principles-grid { grid-template-columns: repeat(2, 1fr); }
+    footer { flex-direction: column; gap: 0.75rem; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">🐾 <span>Claw<span class="claw">Coach</span></span></div>
+  <ul class="nav-links">
+    <li><a href="#demo">Demo</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#watch">Watch</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="https://github.com/liudt921115/adhd_clawcoach/" target="_blank" rel="noopener">GitHub</a></li>
+    <li><a href="https://wa.me/447831822873" target="_blank" rel="noopener" class="nav-cta">WhatsApp</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+
+  <div class="tag">
+    <div class="tag-dot"></div>
+    Energy-aware AI coaching · Built on OpenClaw
+  </div>
+
+  <h1>The layer between<br><em>intent</em> and action.</h1>
+
+  <p class="hero-subtitle">
+    ClawCoach is not a task manager. It's the regulation layer that holds your direction steady when your energy isn't — designed for minds that work differently.
+  </p>
+
+  <div class="hero-actions">
+    <a href="https://youtube.com/shorts/hZvnlzEFJJE?si=nD5wWmLGnXalH-1G" target="_blank" rel="noopener" class="btn-primary">See it in action →</a>
+    <a href="#how" class="btn-ghost">How it works</a>
+  </div>
+</section>
+
+<!-- DEMO SECTION -->
+<section class="demo-section" id="demo">
+  <div class="section-label">Live Demo</div>
+  <h2 class="section-title">ClawCoach<br>adapts to your state.</h2>
+  <p class="section-body">Select a real scenario. See how ClawCoach responds — adjusting task granularity, energy mode, and intervention style in real time.</p>
+
+  <div class="demo-container">
+    <!-- Chat Window -->
+    <div class="chat-window">
+      <div class="chat-header">
+        <div class="chat-avatar">🐾</div>
+        <div>
+          <div class="chat-name">ClawCoach</div>
+          <div class="chat-status">Active · Energy monitoring on</div>
+        </div>
+      </div>
+      <div class="chat-body" id="chatBody">
+        <div class="msg msg-ai show">
+          <div class="msg-bubble">
+            Hey 👋 I'm here. What's your energy like right now — high, medium, or low?
+          </div>
+          <div class="msg-time">Just now</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scenario Selector -->
+    <div class="scenarios">
+      <div class="scenario-btn" onclick="runScenario('low')">
+        <div class="scenario-icon">🌧️</div>
+        <div class="scenario-title">Low energy, can't start</div>
+        <div class="scenario-desc">Stuck. The task feels huge. You've been avoiding it for hours.</div>
+      </div>
+      <div class="scenario-btn" onclick="runScenario('drift')">
+        <div class="scenario-icon">🌀</div>
+        <div class="scenario-title">Getting distracted</div>
+        <div class="scenario-desc">You started strong but drifted. Now you're doing something else entirely.</div>
+      </div>
+      <div class="scenario-btn" onclick="runScenario('urgent')">
+        <div class="scenario-icon">⚡</div>
+        <div class="scenario-title">Meeting in 20 minutes</div>
+        <div class="scenario-desc">An event is coming up. You haven't prepared. Time blindness hits again.</div>
+      </div>
+      <div class="scenario-btn" onclick="runScenario('resist')">
+        <div class="scenario-icon">🧱</div>
+        <div class="scenario-title">Resisting the task</div>
+        <div class="scenario-desc">You feel like you should do it — but can't figure out if you actually want to.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section class="architecture" id="how">
+  <div class="arch-inner">
+    <div class="section-label reveal">Three-Layer Architecture</div>
+    <h2 class="section-title reveal">Direction stays constant.<br>Execution adapts.</h2>
+    <p class="section-body reveal">ClawCoach operates across three distinct layers — each serving a different time horizon and depth of regulation.</p>
+
+    <div class="layers">
+      <div class="layer-card reveal">
+        <div class="layer-num">LAYER 01</div>
+        <div class="layer-icon">🧭</div>
+        <div class="layer-title">Intent Layer</div>
+        <div class="layer-subtitle">Direction Layer</div>
+        <div class="layer-body">Your long-term goals, core projects, and value priorities live here. This layer is deliberately stable — it does not bend to low-energy days or passing resistance.</div>
+        <div class="layer-features">
+          <div class="lf-item">Long-term goals</div>
+          <div class="lf-item">Core project tracking</div>
+          <div class="lf-item">Value priority mapping</div>
+          <div class="lf-item">Direction anchoring</div>
+        </div>
+      </div>
+
+      <div class="layer-card reveal">
+        <div class="layer-num">LAYER 02</div>
+        <div class="layer-icon">⚙️</div>
+        <div class="layer-title">Regulation Layer</div>
+        <div class="layer-subtitle">The Core Engine</div>
+        <div class="layer-body">The heart of ClawCoach. Twelve subsystems work together to keep you moving — adjusting granularity, detecting energy shifts, preventing shame spirals, and managing drift.</div>
+        <div class="layer-features">
+          <div class="lf-item">Priority engine (Urgency × Importance)</div>
+          <div class="lf-item">Energy-aware task scaling</div>
+          <div class="lf-item">Continuous granularity adjustment</div>
+          <div class="lf-item">Intent Check & Controlled Drift</div>
+          <div class="lf-item">Heartbeat monitoring</div>
+          <div class="lf-item">Fail-Safe Reset (3-day low)</div>
+        </div>
+      </div>
+
+      <div class="layer-card reveal">
+        <div class="layer-num">LAYER 03</div>
+        <div class="layer-icon">🌱</div>
+        <div class="layer-title">Evolution Layer</div>
+        <div class="layer-subtitle">Long-term Growth</div>
+        <div class="layer-body">ClawCoach silently tracks your startup success rate, energy patterns, drift triggers, and weekly rhythms — reinforcing your behavioral identity, not just your output.</div>
+        <div class="layer-features">
+          <div class="lf-item">Startup success tracking</div>
+          <div class="lf-item">Energy pattern recognition</div>
+          <div class="lf-item">Drift pattern mapping</div>
+          <div class="lf-item">Behavioral identity reinforcement</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ENERGY SYSTEM -->
+<section class="energy-section" id="energy">
+  <div class="section-label reveal">Continuous Adjustment</div>
+  <h2 class="section-title reveal">Four dimensions.<br>Always adapting.</h2>
+
+  <div class="energy-grid">
+    <div class="energy-visual reveal">
+      <div style="font-size:0.78rem; color:var(--muted); font-family:'DM Mono',monospace; letter-spacing:0.08em; margin-bottom:1.25rem; text-transform:uppercase;">Energy State</div>
+
+      <div class="energy-bar-group">
+        <div class="energy-label"><span>⚡ High</span><span>Full capacity</span></div>
+        <div class="energy-bar"><div class="energy-fill fill-high"></div></div>
+      </div>
+      <div class="energy-bar-group">
+        <div class="energy-label"><span>☁️ Medium</span><span>Adjusted mode</span></div>
+        <div class="energy-bar"><div class="energy-fill fill-med"></div></div>
+      </div>
+      <div class="energy-bar-group">
+        <div class="energy-label"><span>🌧️ Low</span><span>Survival mode</span></div>
+        <div class="energy-bar"><div class="energy-fill fill-low"></div></div>
+      </div>
+
+      <div class="granularity-demo">
+        <div class="gran-title">TASK GRANULARITY — LOW ENERGY MODE</div>
+        <div class="gran-steps">
+          <div class="gran-step dim"><div class="gran-step-icon">📄</div>Write the full report (2 hrs)</div>
+          <div class="gran-step dim"><div class="gran-step-icon">📝</div>Write one section (30 min)</div>
+          <div class="gran-step dim"><div class="gran-step-icon">✏️</div>Write the intro paragraph (5 min)</div>
+          <div class="gran-step active"><div class="gran-step-icon">👆</div>Just open the document ← Start here</div>
+        </div>
+      </div>
+    </div>
+
+    <ul class="energy-features reveal">
+      <li class="ef-item">
+        <div class="ef-icon">📐</div>
+        <div class="ef-content">
+          <h4>Granularity Scaling</h4>
+          <p>Tasks compress continuously — from full project to "just open the file" — then expand back as you gain momentum.</p>
+        </div>
+      </li>
+      <li class="ef-item">
+        <div class="ef-icon">⏱️</div>
+        <div class="ef-content">
+          <h4>Time Expectation Reset</h4>
+          <p>Adjusts from 2-hour blocks down to 2-minute sprints based on your real state, not your planned state.</p>
+        </div>
+      </li>
+      <li class="ef-item">
+        <div class="ef-icon">🔄</div>
+        <div class="ef-content">
+          <h4>Mode Switching</h4>
+          <p>From writing content → writing an outline → recording a voice draft. The goal survives even if the method changes.</p>
+        </div>
+      </li>
+      <li class="ef-item">
+        <div class="ef-icon">🏆</div>
+        <div class="ef-content">
+          <h4>Success Redefinition</h4>
+          <p>Starting is a win. Returning to the main track is a win. ClawCoach never measures you against your best days.</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- PRINCIPLES -->
+<section class="principles" id="principles">
+  <div class="principles-inner">
+    <div class="section-label reveal">Core Principles</div>
+    <h2 class="section-title reveal">Built differently,<br>for different minds.</h2>
+
+    <div class="principles-grid">
+      <div class="principle-card reveal">
+        <div class="pc-icon">🤫</div>
+        <div class="pc-title">Silent when stable</div>
+        <div class="pc-body">ClawCoach only speaks at state transitions. When you're in flow, it disappears. No unnecessary nudges, no dopamine traps.</div>
+      </div>
+      <div class="principle-card reveal">
+        <div class="pc-icon">🧭</div>
+        <div class="pc-title">Direction over discipline</div>
+        <div class="pc-body">The goal stays fixed. The path bends to meet you where you are. Changing method is not failure — it's regulation.</div>
+      </div>
+      <div class="principle-card reveal">
+        <div class="pc-icon">🛡️</div>
+        <div class="pc-title">Anti-shame architecture</div>
+        <div class="pc-body">Fail-Safe Reset mode activates after 3 low-execution days. No tracking, no shame, no efficiency talk — just 2-minute tasks until you rebuild.</div>
+      </div>
+      <div class="principle-card reveal">
+        <div class="pc-icon">🪞</div>
+        <div class="pc-title">Mirror, not motivator</div>
+        <div class="pc-body">Rewards reflect behavior identity back to you: "You started even in low energy." Not dopamine spikes — recognition of who you're becoming.</div>
+      </div>
+      <div class="principle-card reveal">
+        <div class="pc-icon">🌊</div>
+        <div class="pc-title">Controlled Drift</div>
+        <div class="pc-body">Short-term detours are allowed. ClawCoach sets a return time, maintains your main direction, and prevents resistance spirals.</div>
+      </div>
+      <div class="principle-card reveal">
+        <div class="pc-icon">⚡</div>
+        <div class="pc-title">Urgency interrupt</div>
+        <div class="pc-body">Before events and meetings, the system calculates preparation time and triggers proactively — solving time blindness before it strikes.</div>
+      </div>
+      <div class="principle-card reveal">
+        <div class="pc-icon">🔬</div>
+        <div class="pc-title">Intent Check</div>
+        <div class="pc-body">When resistance appears, ClawCoach asks: do you want to do this, or just feel you should? The answer shapes the path forward, not judgment.</div>
+      </div>
+      <div class="principle-card reveal">
+        <div class="pc-icon">🏠</div>
+        <div class="pc-title">Routine as foundation</div>
+        <div class="pc-body">Food, rest, sleep, hygiene — not tasks, but base layer. Sleep Guard and recovery nudges come before productivity.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUOTE -->
+<section class="quote-section">
+  <div class="quote-glow"></div>
+  <p class="quote-text reveal">
+    ClawCoach doesn't do things for you.<br>
+    It <em>holds you</em> when you're unstable,<br>
+    <em>pulls you back</em> when you drift,<br>
+    and quietly <em>disappears</em> when you're steady.
+  </p>
+  <div class="quote-source reveal">— Core philosophy of ClawCoach</div>
+</section>
+
+<!-- VIDEO DEMO -->
+<section class="cta-section" id="watch" style="border-top:1px solid var(--border); padding-top:5rem;">
+  <div class="section-label reveal" style="text-align:center;">See it live</div>
+  <h2 class="reveal" style="margin-bottom:1rem;">Watch ClawCoach in action</h2>
+  <p class="reveal" style="color:var(--muted);margin-bottom:2.5rem;">A real demo of the coaching flow — low energy, drift, and urgency interrupt.</p>
+  <div class="reveal" style="display:flex;justify-content:center;">
+    <a href="https://youtube.com/shorts/hZvnlzEFJJE?si=nD5wWmLGnXalH-1G" target="_blank" rel="noopener"
+      style="display:inline-flex;align-items:center;gap:0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.25rem 2rem;text-decoration:none;color:var(--text);transition:all 0.2s;font-size:0.95rem;font-weight:500;"
+      onmouseover="this.style.borderColor='var(--accent)';this.style.background='rgba(126,232,162,0.06)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
+      <span style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#ff4e4e,#ff0000);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">▶</span>
+      <div style="text-align:left;">
+        <div style="font-weight:600;margin-bottom:0.2rem;">Watch Demo on YouTube</div>
+        <div style="font-size:0.78rem;color:var(--muted);">youtube.com/shorts · ClawCoach walkthrough</div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="cta-section" id="contact" style="border-top:1px solid var(--border);">
+  <div class="section-label reveal" style="text-align:center;">Get in touch</div>
+  <h2 class="reveal">Let's build this together.</h2>
+  <p class="reveal">Early access, collaboration, or just curious — reach out directly.</p>
+
+  <div class="reveal" style="display:flex;gap:1.25rem;justify-content:center;flex-wrap:wrap;margin-top:1rem;">
+
+    <!-- WhatsApp -->
+    <a href="https://wa.me/447831822873" target="_blank" rel="noopener"
+      style="display:inline-flex;align-items:center;gap:0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.1rem 1.75rem;text-decoration:none;color:var(--text);transition:all 0.2s;min-width:220px;"
+      onmouseover="this.style.borderColor='#25D366';this.style.background='rgba(37,211,102,0.06)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
+      <span style="width:40px;height:40px;border-radius:12px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.25);display:flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0;">💬</span>
+      <div style="text-align:left;">
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.15rem;font-family:'DM Mono',monospace;letter-spacing:0.05em;text-transform:uppercase;">WhatsApp</div>
+        <div style="font-weight:500;font-size:0.9rem;">+44 7831 822873</div>
+      </div>
+    </a>
+
+    <!-- GitHub -->
+    <a href="https://github.com/liudt921115/adhd_clawcoach/" target="_blank" rel="noopener"
+      style="display:inline-flex;align-items:center;gap:0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.1rem 1.75rem;text-decoration:none;color:var(--text);transition:all 0.2s;min-width:220px;"
+      onmouseover="this.style.borderColor='var(--accent2)';this.style.background='rgba(167,139,250,0.06)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
+      <span style="width:40px;height:40px;border-radius:12px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);display:flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:#a78bfa"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+      </span>
+      <div style="text-align:left;">
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.15rem;font-family:'DM Mono',monospace;letter-spacing:0.05em;text-transform:uppercase;">GitHub</div>
+        <div style="font-weight:500;font-size:0.9rem;">adhd_clawcoach</div>
+      </div>
+    </a>
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div style="display:flex;align-items:center;gap:0.5rem;">🐾 ClawCoach · Built on OpenClaw</div>
+  <div>Energy-aware behavior regulation for ADHD minds</div>
+  <div>© 2025 ClawCoach</div>
+</footer>
+
+<script>
+// ─── SCENARIO DATA ───
+const scenarios = {
+  low: {
+    label: 'Low energy, can\'t start',
+    exchanges: [
+      { role: 'user', text: 'Low energy. I have to write a project report but I can\'t even start.' },
+      { role: 'ai', text: null, typing: true },
+      { role: 'ai', badge: '🌧️ Low energy detected', text: 'Okay. The report doesn\'t exist right now.\n\nOne thing: open the document. That\'s it. No writing, no thinking — just open it.\n\nCan you do that in the next 2 minutes?' },
+      { role: 'user', text: 'Okay... I opened it.' },
+      { role: 'ai', badge: '✅ Startup registered', text: 'Good. You\'re in. That was real.\n\nNow — can you type one sentence? Literally anything. The first sentence that comes to mind about this project.', chips: ['Reduced to 5-min sprint', 'Success threshold: start'] }
+    ]
+  },
+  drift: {
+    label: 'Getting distracted',
+    exchanges: [
+      { role: 'user', text: 'I started working but somehow I\'m now watching videos and it\'s been 40 minutes.' },
+      { role: 'ai', text: null, typing: true },
+      { role: 'ai', badge: '🌀 Drift detected', text: 'Controlled drift logged. 40 minutes is the ceiling — not a catastrophe.\n\nYour main track: the proposal draft. It\'s still there.\n\nDo you want 5 more minutes to finish what you\'re watching, then return? Or back now?' },
+      { role: 'user', text: '5 more minutes then back.' },
+      { role: 'ai', badge: '⏱️ Return timer set', text: 'Timer set. At 5 minutes, I\'ll be here.\n\nWhen you return: just open the doc and read the last paragraph you wrote. No pressure to produce — just re-entry.', chips: ['Drift permitted', 'Main track held', 'Return: 5 min'] }
+    ]
+  },
+  urgent: {
+    label: 'Meeting in 20 minutes',
+    exchanges: [
+      { role: 'user', text: 'I just realized I have a team meeting in 20 minutes and I haven\'t prepared anything.' },
+      { role: 'ai', text: null, typing: true },
+      { role: 'ai', badge: '⚡ Urgent interrupt triggered', text: 'Interrupt mode on. Let\'s use what you have.\n\nPrep time available: ~12 minutes (8 min buffer for setup).\n\n→ 4 min: Scan the agenda or last meeting notes\n→ 4 min: Write 2–3 bullet points you want to say\n→ 4 min: Breathe, open the call link, get water\n\nStart with step 1 — what\'s the meeting about?' },
+      { role: 'user', text: 'Q3 review, I need to share my team\'s progress.' },
+      { role: 'ai', badge: '📋 Focused prep mode', text: 'Perfect. Open your last status update or any notes from this week.\n\nWhat\'s one thing your team shipped? Say it out loud — that\'s your opening sentence.', chips: ['Interrupt mode', 'Prep sequence active', '12 min window'] }
+    ]
+  },
+  resist: {
+    label: 'Resisting the task',
+    exchanges: [
+      { role: 'user', text: 'I feel like I should work on my thesis but I just can\'t make myself. I keep avoiding it.' },
+      { role: 'ai', text: null, typing: true },
+      { role: 'ai', badge: '🧱 Resistance detected', text: 'Before we do anything — let\'s check.\n\nDo you *want* to work on the thesis, or do you just feel like you *should*?\n\nThere\'s a real difference. Which is it?' },
+      { role: 'user', text: 'I want to... but it feels so huge I don\'t know where to start.' },
+      { role: 'ai', badge: '🔍 Intent confirmed — size issue', text: 'That\'s not resistance. That\'s a too-big problem.\n\nForget the thesis. What\'s the *smallest possible piece* — not a chapter, not a section. Like, the next sentence you need to write?\n\nIf you know it, say it. If you don\'t, let\'s find it together.', chips: ['Intent: genuine', 'Block: task size', 'Approach: micro-entry'] }
+    ]
+  }
+};
+
+let isAnimating = false;
+
+function runScenario(key) {
+  if (isAnimating) return;
+  isAnimating = true;
+
+  // Update active button
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  const data = scenarios[key];
+  const chatBody = document.getElementById('chatBody');
+
+  // Clear and reset
+  chatBody.innerHTML = `
+    <div class="msg msg-ai show">
+      <div class="msg-bubble">Hey 👋 I'm here. What's your energy like right now — high, medium, or low?</div>
+      <div class="msg-time">Just now</div>
+    </div>
+  `;
+
+  let delay = 400;
+
+  data.exchanges.forEach((ex, i) => {
+    delay += ex.typing ? 0 : (i === 0 ? 400 : 600);
+
+    if (ex.typing) {
+      // Show typing then replace with ai message
+      setTimeout(() => {
+        const typingEl = document.createElement('div');
+        typingEl.className = 'msg msg-ai show';
+        typingEl.innerHTML = `<div class="typing"><span></span><span></span><span></span></div>`;
+        chatBody.appendChild(typingEl);
+        chatBody.scrollTop = chatBody.scrollHeight;
+
+        // Replace with actual message after delay
+        setTimeout(() => {
+          typingEl.remove();
+        }, 1000);
+      }, delay);
+      delay += 1000;
+      return;
+    }
+
+    setTimeout(() => {
+      const msgEl = document.createElement('div');
+      msgEl.className = `msg msg-${ex.role}`;
+
+      let inner = '';
+      if (ex.badge) {
+        inner += `<div class="energy-badge">${ex.badge}</div>`;
+      }
+      const formatted = (ex.text || '').replace(/\n/g, '<br>');
+      inner += `<div class="msg-bubble">${formatted}</div>`;
+      if (ex.chips) {
+        inner += `<div style="margin-top:0.5rem">${ex.chips.map(c => `<span class="task-chip">${c}</span>`).join('')}</div>`;
+      }
+      inner += `<div class="msg-time">Just now</div>`;
+      msgEl.innerHTML = inner;
+
+      chatBody.appendChild(msgEl);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          msgEl.classList.add('show');
+          chatBody.scrollTop = chatBody.scrollHeight;
+        });
+      });
+
+      if (i === data.exchanges.length - 1) {
+        setTimeout(() => { isAnimating = false; }, 500);
+      }
+    }, delay);
+  });
+}
+
+// ─── SCROLL REVEAL ───
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => {
+        entry.target.classList.add('visible');
+      }, 80 * (Array.from(entry.target.parentElement?.children || []).indexOf(entry.target)));
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
